@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tron USDT Wallet Connection Analyzer</title>
+    <!-- Cyberpunk Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/cytoscape@3.27.0/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/graphlib@2.1.8/dist/graphlib.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+    <script>
+        // Register dagre extension after all dependencies are loaded
+        if (typeof cytoscape !== 'undefined' && typeof cytoscapeDagre !== 'undefined') {
+            try {
+                cytoscape.use(cytoscapeDagre);
+                console.log('Cytoscape DAGRE extension registered successfully');
+            } catch (e) {
+                console.warn('Failed to register DAGRE extension:', e);
+            }
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Share Tech Mono', 'Courier New', 'Monaco', 'Consolas', monospace;
+            background: #000000;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 255, 0.03) 2px,
+                    rgba(0, 255, 255, 0.03) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 255, 0.03) 2px,
+                    rgba(0, 255, 255, 0.03) 4px
+                );
+            min-height: 100vh;
+            padding: 20px;
+            color: #00ffff;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #0a0a0a;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .header {
+            background: #000000;
+            color: #00ffff;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #00ffff;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            display: none;
+        }
+        
+        .ascii-title {
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre;
+            text-align: center;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin: 20px 0 10px 0;
+            color: #00ffff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 1);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .header p {
+            color: #ffffff;
+            font-size: 1em;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .main-content {
+            padding: 30px;
+            background: #0a0a0a;
+            color: #00ffff;
+        }
+        
+        .ascii-border {
+            border: 1px solid #00ffff;
+            padding: 15px;
+            margin: 15px 0;
+            background: rgba(0, 255, 255, 0.05);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .ascii-separator {
+            text-align: center;
+            color: #00ffff;
+            margin: 20px 0;
+            font-size: 12px;
+            letter-spacing: 5px;
+        }
+        
+        .input-section {
+            background: #000000;
+            padding: 25px;
+            border: 2px solid #00ffff;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            letter-spacing: 1px;
+            font-size: 13px;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #00ffff;
+            background: #000000;
+            color: #00ffff;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-group input::placeholder {
+            color: #006666;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: 2px solid #00ffff;
+            border-radius: 0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: #000000;
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        
+        .btn-primary {
+            background: #000000;
+            color: #00ffff;
+            border-color: #00ffff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 1);
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .btn-secondary {
+            background: #000000;
+            color: #888888;
+            border-color: #666666;
+        }
+        
+        .btn-secondary:hover {
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 255, 255, 0.2);
+            border-top: 4px solid #00ffff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .results-tabs {
+            display: flex;
+            border-bottom: 2px solid #00ffff;
+            margin-bottom: 20px;
+            background: #000000;
+            padding: 0;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: #000000;
+            font-size: 16px;
+            font-weight: 600;
+            color: #888888;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 0 3px rgba(0, 255, 255, 0.3);
+        }
+        
+        .tab:hover {
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+            background: rgba(0, 255, 255, 0.05);
+        }
+        
+        .tab.active {
+            color: #00ffff;
+            border-bottom-color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .path-card {
+            background: #0a0a0a;
+            border: 1px solid #00ffff;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 0, 0, 0.5);
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            position: relative;
+        }
+        
+        .path-card h2, .path-card h3 {
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            border-bottom: 1px solid #00ffff;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .path-card p, .path-card div {
+            color: #ffffff;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .path-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .path-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            background: #000000;
+            padding: 10px 15px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+        
+        .info-label {
+            font-size: 11px;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            margin-top: 5px;
+        }
+        
+        .path-addresses {
+            background: #000000;
+            padding: 15px;
+            border: 1px solid #00ffff;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            color: #00ffff;
+            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+        
+        .address-link {
+            color: #00ffff;
+            text-decoration: none;
+            margin: 0 5px;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            border-bottom: 1px dotted #00ffff;
+        }
+        
+        .address-link:hover {
+            text-shadow: 0 0 10px rgba(0, 255, 255, 1);
+            border-bottom: 1px solid #00ffff;
+        }
+        
+        .risk-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border: 1px solid;
+            font-weight: bold;
+            font-size: 13px;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .risk-low {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        
+        .risk-medium {
+            background: rgba(255, 255, 0, 0.1);
+            color: #ffff00;
+            border-color: #ffff00;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+        
+        .risk-high {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+        
+        .blacklist-warning {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+            padding: 10px 15px;
+            border: 2px solid #ff0000;
+            margin-top: 10px;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
+        }
+        
+        .graph-container {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 600px;
+            width: 100%;
+            height: 600px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .graph-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 255, 0.03) 2px,
+                    rgba(0, 255, 255, 0.03) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 255, 0.03) 2px,
+                    rgba(0, 255, 255, 0.03) 4px
+                );
+            pointer-events: none;
+            border-radius: 8px;
+        }
+        
+        #cy {
+            width: 100%;
+            height: 100%;
+            min-height: 560px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .graph-container:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Transaction Modal */
+        .tx-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+        
+        .tx-modal-content {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            color: #ffffff;
+        }
+        
+        .tx-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #00ffff;
+        }
+        
+        .tx-modal-header h2 {
+            color: #00ffff;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .tx-modal-close {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+        }
+        
+        .tx-modal-close:hover {
+            color: #00ffff;
+        }
+        
+        .tx-modal-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 3px solid #00ffff;
+            border-radius: 5px;
+        }
+        
+        .tx-modal-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .tx-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .tx-list-item {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .tx-list-item:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: #00ffff;
+        }
+        
+        .tx-list-item a {
+            color: #00ffff;
+            text-decoration: none;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+        
+        .tx-list-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .tx-list-item-number {
+            color: #ffffff;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #000000;
+            color: #00ffff;
+            padding: 25px;
+            border: 2px solid #00ffff;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        
+        .stat-card::before {
+            content: '┌─────────────────────────┐';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            color: #00ffff;
+            font-size: 10px;
+        }
+        
+        .stat-card::after {
+            content: '└─────────────────────────┘';
+            position: absolute;
+            bottom: -1px;
+            left: -1px;
+            color: #00ffff;
+            font-size: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #00ffff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 1);
+        }
+        
+        .stat-label {
+            color: #ffffff;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .error-message {
+            background: #000000;
+            color: #ff0000;
+            padding: 15px;
+            border: 2px solid #ff0000;
+            margin-top: 20px;
+            display: none;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+                <div class="header">
+            <div class="ascii-title">
+                  ████████╗██████╗  █████╗ ███╗   ██╗ █████╗ ███╗   ██╗ █████╗                     
+                 ╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔══██╗████╗  ██║██╔══██╗                    
+                    ██║   ██████╔╝███████║██╔██╗ ██║███████║██╔██╗ ██║███████║                    
+                    ██║   ██╔══██╗██╔══██║██║╚██╗██║██╔══██║██║╚██╗██║██╔══██║                    
+                    ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██║██║ ╚████║██║  ██║                    
+                    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝                    
+                 
+          ════  WALLET CONNECTION ANALYZER v2.0  ════            
+</div>
+            <h1>◆ TRON USDT WALLET ANALYZER ◆</h1>
+            <p>► DEEP CHAIN ANALYSIS | FIND HIDDEN CONNECTIONS ►</p>
+            <p style="margin-top: 10px; font-size: 14px; color: #ffffff; opacity: 0.7; font-family: 'Share Tech Mono', 'Courier New', monospace;">Made for MAGIC mith love by no self labs</p>
+            <div class="ascii-separator">═══════════════════════════════════════════════════════════════</div>
+        </div>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="source-address">Source Wallet Address</label>
+                    <input type="text" id="source-address" placeholder="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t" />
+                </div>
+                
+                <div class="input-group">
+                    <label for="target-address">Target Wallet Address</label>
+                    <input type="text" id="target-address" placeholder="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t" />
+                </div>
+                
+                <div class="input-group">
+                    <label for="search-depth">Search Depth (Hops)</label>
+                    <select id="search-depth" style="width: 100%; padding: 12px; border: 2px solid #00ffff; border-radius: 0; font-size: 16px; background: #000000; color: #00ffff; font-family: 'Share Tech Mono', 'Courier New', monospace;">
+                        <option value="1">1 Hop (Direct connections only - Fastest)</option>
+                        <option value="2" selected>2 Hops (Through 1 intermediate - Fast, ~15 min)</option>
+                        <option value="3">3 Hops (Through 2 intermediates - Medium, ~20 min)</option>
+                        <option value="4">4 Hops (Through 3 intermediates - Slow, ~40 min)</option>
+                        <option value="5">5 Hops (Through 4 intermediates - Very Slow, ~60 min)</option>
+                    </select>
+                    <p style="margin-top: 5px; font-size: 12px; color: #00ffff; font-family: 'Share Tech Mono', 'Courier New', monospace;">► Higher depth = more thorough but slower analysis</p>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="analyzeConnections()">► ANALYZE CONNECTIONS</button>
+                    <button class="btn-secondary" onclick="clearResults()">[ CLEAR ]</button>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing wallet connections... Time varies by selected depth.</p>
+                <p style="margin-top: 10px; color: #666; font-size: 14px;" id="depth-info">Select depth above to start analysis</p>
+                <p style="margin-top: 10px; color: #888; font-size: 12px;">Please wait - do not refresh the page</p>
+                <p style="margin-top: 10px; color: #aaa; font-size: 11px;" id="timeout-warning"></p>
+                <div id="progress-info" style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; display: none;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">Progress:</div>
+                    <div id="progress-text" style="font-size: 13px;">Initializing...</div>
+                    <div id="progress-stats" style="font-size: 12px; margin-top: 5px; opacity: 0.9;"></div>
+                </div>
+            </div>
+            
+            <div class="error-message" id="error-message"></div>
+            
+            <div class="results-section" id="results-section">
+                <div class="stats-grid" id="stats-grid"></div>
+                
+                <div class="results-tabs">
+                    <button class="tab active" onclick="switchTab('overview')">■ OVERVIEW</button>
+                    <button class="tab" onclick="switchTab('paths')">▶ PATHS</button>
+                    <button class="tab" onclick="switchTab('graph')">◆ GRAPH</button>
+                </div>
+                
+                <div id="overview-tab" class="tab-content active">
+                    <div id="overview-content"></div>
+                </div>
+                
+                <div id="paths-tab" class="tab-content">
+                    <div id="paths-content"></div>
+                </div>
+                
+                <div id="graph-tab" class="tab-content">
+                    <div class="graph-container" id="graph-container">
+                        <div id="cy"></div>
+                    </div>
+                </div>
+                
+                <!-- Transaction Modal -->
+                <div id="tx-modal" class="tx-modal">
+                    <div class="tx-modal-content">
+                        <div class="tx-modal-header">
+                            <h2>► TRANSACTIONS</h2>
+                            <button class="tx-modal-close" onclick="closeTxModal()">&times;</button>
+                        </div>
+                        <div id="tx-modal-body"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let analysisData = null;
+        
+        async function analyzeConnections() {
+            const sourceAddress = document.getElementById('source-address').value.trim();
+            const targetAddress = document.getElementById('target-address').value.trim();
+            const searchDepth = parseInt(document.getElementById('search-depth').value) || 2;
+            
+            if (!sourceAddress || !targetAddress) {
+                showError('Please enter both source and target addresses');
+                return;
+            }
+            
+            // Validate address format
+            if (!sourceAddress.startsWith('T') || sourceAddress.length !== 34) {
+                showError('Invalid source address format. Tron addresses start with T and are 34 characters long.');
+                return;
+            }
+            
+            if (!targetAddress.startsWith('T') || targetAddress.length !== 34) {
+                showError('Invalid target address format. Tron addresses start with T and are 34 characters long.');
+                return;
+            }
+            
+            // Validate depth
+            if (searchDepth < 1 || searchDepth > 5) {
+                showError('Search depth must be between 1 and 5');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+            
+            // Calculate timeout based on depth (in milliseconds)
+            const timeoutMinutes = {
+                1: 5,    // 5 minutes for depth 1
+                2: 15,   // 15 minutes for depth 2
+                3: 20,   // 20 minutes for depth 3
+                4: 40,   // 40 minutes for depth 4
+                5: 60    // 60 minutes (1 hour) for depth 5
+            };
+            const timeoutMs = (timeoutMinutes[searchDepth] || 20) * 60 * 1000;
+            const maxTime = timeoutMinutes[searchDepth] || 20;
+            
+            // Update loading messages
+            document.getElementById('depth-info').textContent = `Exploring up to ${searchDepth} hop(s) deep (max timeout: ${maxTime} minutes)`;
+            document.getElementById('timeout-warning').textContent = `⏱️ Maximum analysis time: ${maxTime} minute(s) for depth ${searchDepth}`;
+            
+            // Show progress info and start elapsed time counter
+            const progressInfo = document.getElementById('progress-info');
+            const progressText = document.getElementById('progress-text');
+            const progressStats = document.getElementById('progress-stats');
+            progressInfo.style.display = 'block';
+            progressText.textContent = `Starting analysis with depth ${searchDepth}...`;
+            
+            const startTime = Date.now();
+            let elapsedInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                const maxTime = timeoutMinutes[searchDepth] || 20;
+                progressStats.textContent = `⏱️ Elapsed time: ${minutes}m ${seconds}s (Max: ${maxTime} min)`;
+                
+                // Update status messages based on elapsed time
+                if (elapsed < 30) {
+                    progressText.textContent = `Building transaction graph from source wallet (Depth ${searchDepth})...`;
+                } else if (elapsed < 120) {
+                    progressText.textContent = `Building transaction graph from target wallet (Depth ${searchDepth})...`;
+                } else if (elapsed < 300) {
+                    progressText.textContent = `Exploring connections and finding paths (Depth ${searchDepth})...`;
+                } else if (elapsed < 600) {
+                    progressText.textContent = `Deep analysis in progress (Depth ${searchDepth}, large wallet detected)...`;
+                } else {
+                    progressText.textContent = `Comprehensive analysis in progress (Depth ${searchDepth}) - this may take up to ${maxTime} minutes...`;
+                }
+            }, 1000);
+            
+            try {
+                // Create AbortController for timeout handling
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        source_address: sourceAddress,
+                        target_address: targetAddress,
+                        max_depth: searchDepth
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                
+                analysisData = data;
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                const maxTime = timeoutMinutes[searchDepth] || 20;
+                if (error.name === 'AbortError') {
+                    showError(`Request timed out after ${maxTime} minutes (depth ${searchDepth}). The analysis may still be running for very large wallets. Please refresh and try again.`);
+                } else if (error.message === 'Failed to fetch') {
+                    showError('Failed to connect to server. Please check:\n1. Server is running on port 5001\n2. No firewall blocking the connection\n3. Try refreshing the page\n\nError details: ' + error.message);
+                } else {
+                    showError('Error: ' + error.message + (error.stack ? '\n\nDetails: ' + error.stack.split('\n')[0] : ''));
+                }
+            } finally {
+                clearInterval(elapsedInterval);
+                document.getElementById('loading').style.display = 'none';
+                progressInfo.style.display = 'none';
+            }
+        }
+        
+        function displayResults(data) {
+            document.getElementById('results-section').style.display = 'block';
+            
+            // Display stats
+            const statsGrid = document.getElementById('stats-grid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${data.total_paths_found}</div>
+                    <div class="stat-label">Paths Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.graph_statistics.nodes}</div>
+                    <div class="stat-label">Wallets Analyzed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.graph_statistics.edges}</div>
+                    <div class="stat-label">Transactions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.shortest_path ? data.shortest_path.hops : 'N/A'}</div>
+                    <div class="stat-label">Shortest Path (Hops)</div>
+                </div>
+                ${data.slowmist_analysis ? `
+                <div class="stat-card">
+                    <div class="stat-value">${data.slowmist_analysis.communities_detected || 0}</div>
+                    <div class="stat-label">Communities Found</div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Display overview
+            displayOverview(data);
+            
+            // Display paths
+            displayPaths(data.paths);
+            
+            // Display graph
+            displayGraph(data);
+        }
+        
+        function displayOverview(data) {
+            const overviewContent = document.getElementById('overview-content');
+            
+            let html = `<div class="path-card">
+                <h2>► ANALYSIS SUMMARY</h2>
+                <div class="path-info">
+                    <div class="info-item">
+                        <div class="info-label">Source Address</div>
+                        <div class="info-value" style="font-size: 14px;">${data.source}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Target Address</div>
+                        <div class="info-value" style="font-size: 14px;">${data.target}</div>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; line-height: 1.8;">
+                    <strong>Analysis Results:</strong><br/>
+                    Found <strong>${data.total_paths_found}</strong> connection path(s) between the two addresses.<br/>
+                    Analyzed <strong>${data.graph_statistics.nodes}</strong> unique wallets and <strong>${data.graph_statistics.edges}</strong> transactions.<br/>
+                    ${data.shortest_path ? `Shortest path contains <strong>${data.shortest_path.hops}</strong> hops.` : 'No direct connection found.'}
+                </p>
+            </div>`;
+            
+            if (data.shortest_path) {
+                const path = data.shortest_path;
+                html += `<div class="path-card">
+                    <h3>► SHORTEST PATH DETAILS</h3>
+                    <div class="path-info">
+                        <div class="info-item">
+                            <div class="info-label">Total Hops</div>
+                            <div class="info-value">${path.hops}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Total Amount</div>
+                            <div class="info-value">${formatUSDT(path.total_amount)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Transactions</div>
+                            <div class="info-value">${path.transaction_count}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Risk Score</div>
+                            <div class="info-value">${getRiskBadge(path.risk_score, path.risk_level)}</div>
+                        </div>
+                    </div>
+                    ${path.risk_warnings && path.risk_warnings.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 12px; background: ${path.risk_level === 'critical' ? 'rgba(255, 0, 0, 0.15)' : path.risk_level === 'high' ? 'rgba(255, 165, 0, 0.15)' : 'rgba(0, 255, 255, 0.1)'}; border-radius: 5px; border-left: 4px solid ${path.risk_level === 'critical' ? '#ff0000' : path.risk_level === 'high' ? '#ffa500' : '#00ffff'};">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: ${path.risk_level === 'critical' ? '#ff0000' : path.risk_level === 'high' ? '#ffa500' : '#00ffff'};">
+                                ${path.risk_level === 'critical' ? '🚨 CRITICAL RISK' : path.risk_level === 'high' ? '⚠️ HIGH RISK' : path.risk_level === 'medium' ? '🟡 MEDIUM RISK' : '🟢 LOW RISK'}
+                            </div>
+                            ${path.risk_recommendation ? `<div style="margin-bottom: 10px; font-size: 13px;">${path.risk_recommendation}</div>` : ''}
+                            <div style="margin-top: 10px;">
+                                <strong style="font-size: 12px;">Risk Factors Detected:</strong>
+                                <ul style="margin: 5px 0; padding-left: 20px; font-size: 12px;">
+                                    ${path.risk_warnings.map(warning => `<li>${warning}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ${path.risk_breakdown && Object.keys(path.risk_breakdown).length > 0 ? `
+                                <div style="margin-top: 10px; padding: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00ffff; border-radius: 3px; font-size: 11px; color: #ffffff;">
+                                    <strong>Risk Breakdown:</strong>
+                                    <div style="margin-top: 5px;">
+                                        ${Object.entries(path.risk_breakdown).map(([key, value]) => 
+                                            `<span style="margin-right: 10px; color: ${value > 0 ? '#cc0000' : '#28a745'};">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${value > 0 ? '+' : ''}${value.toFixed(1)}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    <div class="path-addresses" style="line-height: 1.8; margin-top: 15px;">
+                        <strong>Connection Path:</strong><br/>
+                        ${path.path.map((addr, i) => {
+                            const isLast = i === path.path.length - 1;
+                            let html = `<span style="font-weight: 500; color: #ffffff;">${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}</span>`;
+                            
+                            if (!isLast && path.transactions && path.transactions[i]) {
+                                const txData = path.transactions[i];
+                                const txHashes = txData.tx_hashes || [];
+                                
+                                if (txHashes.length > 0) {
+                                    const primaryTxHash = txHashes[0];
+                                    const txAmount = txData.total_amount || 0;
+                                    html += ` → <a href="https://tronscan.org/#/transaction/${primaryTxHash}" target="_blank" class="address-link" style="color: #00ffff; text-decoration: underline; font-weight: bold;">🔗 TX ${primaryTxHash.substring(0, 8)}...${primaryTxHash.substring(primaryTxHash.length - 6)}</a>`;
+                                    if (txHashes.length > 1) {
+                                        html += ` <span style="color: #888888; font-size: 11px;">(+${txHashes.length - 1} more)</span>`;
+                                    }
+                                } else {
+                                    html += ` → <span style="color: #888888;">[TX]</span>`;
+                                }
+                            }
+                            
+                            return html;
+                        }).join(' ')}
+                    </div>
+                    ${path.transactions && path.transactions.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; font-size: 12px; color: #00ffff;">
+                            <strong>Transaction Links:</strong><br/>
+                            ${path.transactions.map((tx, idx) => {
+                                const txHashes = tx.tx_hashes || [];
+                                if (txHashes.length === 0) return '';
+                                return txHashes.map((txHash, txIdx) => `
+                                    <a href="https://tronscan.org/#/transaction/${txHash}" target="_blank" class="address-link" style="font-size: 11px; color: #00ffff; margin-right: 10px;">
+                                        📄 Step ${idx + 1} TX #${txIdx + 1}: ${txHash.substring(0, 16)}...${txHash.substring(txHash.length - 8)}
+                                    </a>
+                                `).join('');
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                    ${path.blacklisted_addresses.length > 0 ? 
+                        `<div class="blacklist-warning">⚠️ Warning: ${path.blacklisted_addresses.length} blacklisted address(es) found in this path</div>` : ''}
+                    ${path.exchange_addresses.length > 0 ? 
+                        `<p style="margin-top: 10px;"><strong>Exchange Addresses:</strong> ${path.exchange_addresses.join(', ')}</p>` : ''}
+                </div>`;
+            }
+            
+            // Add comprehensive SlowMist analysis section
+            if (data.slowmist_analysis) {
+                const sm = data.slowmist_analysis;
+                
+                // Wallet Ratings Section
+                html += `<div class="path-card">
+                    <h2>► WALLET RATINGS & CLASSIFICATIONS</h2>
+                    <div class="path-info">
+                        <div class="info-item">
+                            <div class="info-label">Source Wallet Rating</div>
+                            <div class="info-value">${getWalletRatingDisplay(sm.source_rating)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Target Wallet Rating</div>
+                            <div class="info-value">${getWalletRatingDisplay(sm.target_rating)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Source Classification</div>
+                            <div class="info-value">${(sm.source_classification?.type || 'unknown').toUpperCase()}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Target Classification</div>
+                            <div class="info-value">${(sm.target_classification?.type || 'unknown').toUpperCase()}</div>
+                        </div>
+                    </div>
+                    ${sm.source_rating ? `
+                        <div style="margin-top: 15px; padding: 15px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; color: #ffffff;">
+                            <h4 style="color: #00ffff;">Source Wallet Details</h4>
+                            <p><strong>Overall Rating:</strong> ${sm.source_rating.overall_rating || 0}/100</p>
+                            <p><strong>Classification:</strong> ${sm.source_rating.classification || 'unknown'}</p>
+                            <p><strong>Importance Score:</strong> ${(sm.source_rating.importance_score || 0).toFixed(6)}</p>
+                            ${sm.source_rating.is_blacklisted ? '<p style="color: red;"><strong>⚠️ BLOCKED WALLET</strong></p>' : ''}
+                            ${sm.source_rating.is_exchange ? '<p><strong>Exchange Wallet</strong></p>' : ''}
+                        </div>
+                    ` : ''}
+                    ${sm.target_rating ? `
+                        <div style="margin-top: 15px; padding: 15px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; color: #ffffff;">
+                            <h4 style="color: #00ffff;">Target Wallet Details</h4>
+                            <p><strong>Overall Rating:</strong> ${sm.target_rating.overall_rating || 0}/100</p>
+                            <p><strong>Classification:</strong> ${sm.target_rating.classification || 'unknown'}</p>
+                            <p><strong>Importance Score:</strong> ${(sm.target_rating.importance_score || 0).toFixed(6)}</p>
+                            ${sm.target_rating.is_blacklisted ? '<p style="color: red;"><strong>⚠️ BLOCKED WALLET</strong></p>' : ''}
+                            ${sm.target_rating.is_exchange ? '<p><strong>Exchange Wallet</strong></p>' : ''}
+                        </div>
+                    ` : ''}
+                </div>`;
+                
+                // Blocked Wallets Section
+                if (sm.blocked_wallets && sm.blocked_wallets.length > 0) {
+                    html += `<div class="path-card" style="border: 2px solid #ff0000; background: rgba(255, 0, 0, 0.15);">
+                        <h2 style="color: #ff0000;">🚫 BLOCKED WALLETS DETECTED</h2>
+                        <p style="color: #ff0000; font-weight: bold;">⚠️ WARNING: ${sm.blocked_wallets.length} blocked wallet(s) found in analysis!</p>
+                        ${sm.blocked_wallets.map(bw => `
+                            <div style="margin-top: 15px; padding: 15px; background: rgba(255, 0, 0, 0.2); border: 1px solid #ff0000; border-radius: 5px; border-left: 4px solid #ff0000; color: #ffffff;">
+                                <p><strong>Address:</strong> <a href="https://tronscan.org/#/address/${bw.address}" target="_blank" class="address-link">${bw.address}</a></p>
+                                <p><strong>Risk Score:</strong> ${bw.risk_score || 0}/100</p>
+                                <p><strong>Classification:</strong> ${bw.classification || 'unknown'}</p>
+                                ${bw.fraud_transaction ? '<p style="color: red;"><strong>Has Fraud Transactions</strong></p>' : ''}
+                            </div>
+                        `).join('')}
+                    </div>`;
+                }
+                
+                // Service Connections Section
+                if (sm.service_connections && sm.service_connections.length > 0) {
+                    html += `<div class="path-card">
+                        <h2>🏦 Service Connections (Exchanges)</h2>
+                        <p>Found ${sm.service_connections.length} exchange/service wallet connection(s)</p>
+                        ${sm.service_connections.map(sc => `
+                            <div style="margin-top: 10px; padding: 10px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; color: #ffffff;">
+                                <p><strong>Service Type:</strong> ${sc.service_type || 'Unknown'}</p>
+                                <p><strong>Service Name:</strong> ${sc.service_name || 'Unknown Exchange'}</p>
+                                <p><strong>Address:</strong> <a href="https://tronscan.org/#/address/${sc.address}" target="_blank" class="address-link">${sc.address}</a></p>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                }
+                
+                // Key Addresses Section
+                if (sm.key_addresses && sm.key_addresses.length > 0) {
+                    html += `<div class="path-card">
+                        <h2>🔑 Top Important Addresses (PageRank)</h2>
+                        <div style="margin-top: 10px;">
+                            ${sm.key_addresses.slice(0, 10).map(addr => `
+                                <div style="margin: 10px 0; padding: 10px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; color: #ffffff;">
+                                    <p><strong>${addr.classification || 'unknown'}</strong> wallet</p>
+                                    <p><a href="https://tronscan.org/#/address/${addr.address}" target="_blank" class="address-link">${addr.address}</a></p>
+                                    <p>Importance Score: ${(addr.importance_score || 0).toFixed(6)}</p>
+                                    ${addr.rating ? `<p>Overall Rating: ${addr.rating.overall_rating || 0}/100</p>` : ''}
+                                    ${addr.is_blacklisted ? '<p style="color: red;"><strong>⚠️ BLOCKED</strong></p>' : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                }
+                
+                // Communities Section with Intelligent Names
+                if (sm.communities_list && sm.communities_list.length > 0) {
+                    html += `<div class="path-card">
+                        <h2>👥 Detected Communities (${sm.communities_list.length})</h2>
+                        <p>Found ${sm.communities_detected || 0} community/communities through label propagation</p>
+                        ${sm.communities_list.map((comm, idx) => {
+                            const riskColor = comm.risk_level === 'high' ? '#ff0000' : comm.risk_level === 'medium' ? '#ffa500' : '#28a745';
+                            const borderColor = comm.risk_level === 'high' ? '#ff0000' : comm.risk_level === 'medium' ? '#ffa500' : '#667eea';
+                            return `
+                            <div style="margin-top: 15px; padding: 15px; background: ${comm.risk_level === 'high' ? 'rgba(255, 0, 0, 0.15)' : 'rgba(0, 255, 255, 0.1)'}; border: 1px solid ${borderColor}; border-radius: 5px; border-left: 4px solid ${borderColor}; color: #ffffff;">
+                                <h4 style="color: ${riskColor};">
+                                    ${comm.name || `Community #${idx + 1}`}
+                                    <span style="font-size: 14px; color: #888888; font-weight: normal;">(${comm.member_count} member${comm.member_count > 1 ? 's' : ''})</span>
+                                </h4>
+                                ${comm.characteristics && comm.characteristics.length > 0 ? `
+                                    <div style="margin-top: 10px; padding: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00ffff; border-radius: 3px; color: #00ffff;">
+                                        <strong>Characteristics:</strong>
+                                        <ul style="margin: 5px 0; padding-left: 20px;">
+                                            ${comm.characteristics.map(char => `<li>${char}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                <div style="margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                                    <strong>Members:</strong>
+                                    ${comm.addresses.map(addr => `
+                                        <div style="margin: 5px 0;">
+                                            <a href="https://tronscan.org/#/address/${addr}" target="_blank" class="address-link">
+                                                ${addr}
+                                            </a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${comm.risk_level === 'high' ? `
+                                    <div style="margin-top: 10px; padding: 8px; background: rgba(255, 0, 0, 0.2); border: 1px solid #ff0000; border-radius: 3px; color: #ff0000;">
+                                        ⚠️ <strong>HIGH RISK COMMUNITY</strong> - Contains blocked addresses
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                        }).join('')}
+                    </div>`;
+                }
+                
+                // All Wallet Ratings Table
+                if (sm.wallet_ratings && Object.keys(sm.wallet_ratings).length > 0) {
+                    html += `<div class="path-card">
+                        <h2>📊 All Wallet Ratings</h2>
+                        <div style="margin-top: 10px; max-height: 400px; overflow-y: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: rgba(0, 255, 255, 0.2); color: #00ffff; border: 1px solid #00ffff;">
+                                        <th style="padding: 10px; text-align: left;">Address</th>
+                                        <th style="padding: 10px; text-align: left;">Rating</th>
+                                        <th style="padding: 10px; text-align: left;">Classification</th>
+                                        <th style="padding: 10px; text-align: left;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(sm.wallet_ratings).map(([addr, rating]) => `
+                                        <tr style="border-bottom: 1px solid rgba(0, 255, 255, 0.3); color: #ffffff;">
+                                            <td style="padding: 8px;">
+                                                <a href="https://tronscan.org/#/address/${addr}" target="_blank" class="address-link">${addr.substring(0, 12)}...${addr.substring(addr.length - 8)}</a>
+                                            </td>
+                                            <td style="padding: 8px;">
+                                                <span style="font-weight: bold; color: ${getRatingColor(rating.overall_rating || 0)};">
+                                                    ${rating.overall_rating || 0}/100
+                                                </span>
+                                            </td>
+                                            <td style="padding: 8px;">${(rating.classification || 'unknown').toUpperCase()}</td>
+                                            <td style="padding: 8px;">
+                                                ${rating.is_blacklisted ? '<span style="color: red;">🚫 BLOCKED</span>' : ''}
+                                                ${rating.is_exchange ? '<span style="color: orange;">🏦 Exchange</span>' : ''}
+                                                ${!rating.is_blacklisted && !rating.is_exchange ? '<span style="color: green;">✓ OK</span>' : ''}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                }
+            }
+            
+            overviewContent.innerHTML = html;
+        }
+        
+        function displayPaths(paths) {
+            const pathsContent = document.getElementById('paths-content');
+            
+            if (paths.length === 0) {
+                pathsContent.innerHTML = '<p style="text-align: center; padding: 40px; color: #888888;">No connection paths found between the addresses.</p>';
+                return;
+            }
+            
+            let html = '';
+            paths.forEach((path, index) => {
+                const riskClass = path.risk_score >= 50 ? 'risk-high' : path.risk_score >= 25 ? 'risk-medium' : 'risk-low';
+                
+                html += `<div class="path-card">
+                    <div class="path-header">
+                        <h3>Path #${index + 1}</h3>
+                        ${getRiskBadge(path.risk_score || 0, path.risk_level || null)}
+                    </div>
+                    ${path.risk_warnings && path.risk_warnings.length > 0 ? `
+                        <div style="margin-bottom: 15px; padding: 12px; background: ${path.risk_level === 'critical' ? 'rgba(255, 0, 0, 0.15)' : path.risk_level === 'high' ? 'rgba(255, 165, 0, 0.15)' : 'rgba(0, 255, 255, 0.1)'}; border-radius: 5px; border-left: 4px solid ${path.risk_level === 'critical' ? '#ff0000' : path.risk_level === 'high' ? '#ffa500' : '#00ffff'};">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: ${path.risk_level === 'critical' ? '#ff0000' : path.risk_level === 'high' ? '#ffa500' : '#00ffff'};">
+                                ${path.risk_level === 'critical' ? '🚨 CRITICAL RISK' : path.risk_level === 'high' ? '⚠️ HIGH RISK' : path.risk_level === 'medium' ? '🟡 MEDIUM RISK' : '🟢 LOW RISK'}
+                            </div>
+                            ${path.risk_recommendation ? `<div style="margin-bottom: 10px; font-size: 13px; line-height: 1.5;">${path.risk_recommendation}</div>` : ''}
+                            <div style="margin-top: 10px;">
+                                <strong style="font-size: 12px;">Risk Factors:</strong>
+                                <ul style="margin: 5px 0; padding-left: 20px; font-size: 11px; line-height: 1.6;">
+                                    ${path.risk_warnings.slice(0, 5).map(warning => `<li>${warning}</li>`).join('')}
+                                    ${path.risk_warnings.length > 5 ? `<li><em>... and ${path.risk_warnings.length - 5} more</em></li>` : ''}
+                                </ul>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="path-info">
+                        <div class="info-item">
+                            <div class="info-label">Hops</div>
+                            <div class="info-value">${path.hops}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Total Amount</div>
+                            <div class="info-value">${formatUSDT(path.total_amount)}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Transactions</div>
+                            <div class="info-value">${path.transaction_count}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Risk Score</div>
+                            <div class="info-value">${(path.risk_score || 0).toFixed(1)}/100</div>
+                        </div>
+                    </div>
+                    <div class="path-addresses" style="line-height: 1.8;">
+                        ${path.path.map((addr, i) => {
+                            const isLast = i === path.path.length - 1;
+                            const isFirst = i === 0;
+                            let html = '';
+                            
+                            // Show wallet address (but not as link, just text)
+                            html += `<span style="font-weight: 500; color: #ffffff;">${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}</span>`;
+                            
+                            // Add transaction link between wallets (not after last wallet)
+                            if (!isLast && path.transactions && path.transactions[i]) {
+                                const txData = path.transactions[i];
+                                const txHashes = txData.tx_hashes || [];
+                                
+                                if (txHashes.length > 0) {
+                                    // Show transaction link with arrow
+                                    const primaryTxHash = txHashes[0];
+                                    const txAmount = txData.total_amount || 0;
+                                    const txCount = txData.count || 1;
+                                    
+                                    html += ` → <a href="https://tronscan.org/#/transaction/${primaryTxHash}" target="_blank" class="address-link" style="color: #00ffff; text-decoration: underline; font-weight: bold;" title="View transaction: ${txCount} transaction(s), ${formatUSDT(txAmount)}">🔗 TX ${primaryTxHash.substring(0, 8)}...${primaryTxHash.substring(primaryTxHash.length - 6)}</a>`;
+                                    
+                                    // Show additional transactions if there are multiple
+                                    if (txHashes.length > 1) {
+                                        html += ` <span style="color: #888888; font-size: 11px;">(+${txHashes.length - 1} more)</span>`;
+                                    }
+                                    
+                                    // Show amount and count as tooltip info
+                                    html += ` <span style="color: #00ffff; font-size: 11px;">(${formatUSDT(txAmount)})</span>`;
+                                } else {
+                                    html += ` → <span style="color: #888888; font-style: italic;">[Transaction data unavailable]</span>`;
+                                }
+                            }
+                            
+                            return html;
+                        }).join(' ')}
+                    </div>
+                    ${path.transactions && path.transactions.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; border-radius: 5px; border-left: 3px solid #00ffff;">
+                            <strong style="color: #00ffff;">📋 Transaction Details for This Path:</strong>
+                            ${path.transactions.map((tx, idx) => {
+                                const txHashes = tx.tx_hashes || [];
+                                if (txHashes.length === 0) return '';
+                                return `
+                                    <div style="margin-top: 10px; padding: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00ffff; border-radius: 3px; color: #ffffff;">
+                                        <div style="margin-bottom: 5px; color: #00ffff;">
+                                            <strong>Step ${idx + 1}:</strong> 
+                                            <span style="font-family: 'Share Tech Mono', 'Courier New', monospace;">${tx.from.substring(0, 10)}...${tx.from.substring(tx.from.length - 8)}</span>
+                                            <span style="color: #00ffff;">→</span>
+                                            <span style="font-family: 'Share Tech Mono', 'Courier New', monospace;">${tx.to.substring(0, 10)}...${tx.to.substring(tx.to.length - 8)}</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: #00ffff; margin-left: 15px;">
+                                            Amount: <strong>${formatUSDT(tx.total_amount || 0)}</strong> | 
+                                            Transactions: <strong>${tx.count || 0}</strong>
+                                        </div>
+                                        <div style="margin-top: 5px; margin-left: 15px;">
+                                            ${txHashes.map((txHash, txIdx) => `
+                                                <a href="https://tronscan.org/#/transaction/${txHash}" target="_blank" class="address-link" style="font-size: 11px; color: #00ffff; text-decoration: underline; margin-right: 10px;">
+                                                    📄 TX #${txIdx + 1}: ${txHash.substring(0, 16)}...${txHash.substring(txHash.length - 8)}
+                                                </a>
+                                            `).join(' ')}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                    ${path.blacklisted_addresses.length > 0 ? 
+                        `<div class="blacklist-warning">⚠️ Blacklisted: ${path.blacklisted_addresses.join(', ')}</div>` : ''}
+                    ${path.exchange_addresses.length > 0 ? 
+                        `<p style="margin-top: 10px;"><strong>Exchange Addresses:</strong> ${path.exchange_addresses.join(', ')}</p>` : ''}
+                </div>`;
+            });
+            
+            pathsContent.innerHTML = html;
+        }
+        
+        function displayGraph(data) {
+            if (!data.paths || data.paths.length === 0) {
+                document.getElementById('graph-container').innerHTML = 
+                    '<p style="text-align: center; padding: 40px; color: #888888;">No paths to visualize.</p>';
+                return;
+            }
+            
+            // Clear previous graph
+            const container = document.getElementById('graph-container');
+            container.innerHTML = '<div id="cy"></div>';
+            
+            // Build node and edge data for Cytoscape
+            const nodesSet = new Set();
+            const edgesMap = new Map(); // key: "from-to", value: {data}
+            
+            // Collect all unique nodes and edges from paths
+            data.paths.forEach((path, pathIdx) => {
+                path.path.forEach((addr, i) => {
+                    nodesSet.add(addr);
+                    
+                    if (i < path.path.length - 1) {
+                        const fromAddr = path.path[i];
+                        const toAddr = path.path[i + 1];
+                        const txData = path.transactions[i] || {};
+                        const edgeKey = `${fromAddr}->${toAddr}`;
+                        
+                        if (edgesMap.has(edgeKey)) {
+                            // Aggregate transaction data
+                            const existing = edgesMap.get(edgeKey);
+                            existing.amount += txData.total_amount || 0;
+                            existing.count += txData.count || 0;
+                            // Collect all transaction hashes
+                            if (txData.tx_hashes && Array.isArray(txData.tx_hashes)) {
+                                if (!existing.txHashes) existing.txHashes = [];
+                                existing.txHashes.push(...txData.tx_hashes);
+                            }
+                        } else {
+                            edgesMap.set(edgeKey, {
+                                from: fromAddr,
+                                to: toAddr,
+                                amount: txData.total_amount || 0,
+                                count: txData.count || 0,
+                                pathIndex: pathIdx,
+                                txHashes: txData.tx_hashes ? [...txData.tx_hashes] : []
+                            });
+                        }
+                    }
+                });
+            });
+            
+            // Create Cytoscape elements array
+            const elements = [];
+            
+            // Add nodes
+            const allAddresses = Array.from(nodesSet);
+            allAddresses.forEach(addr => {
+                const isSource = addr === data.source;
+                const isTarget = addr === data.target;
+                
+                // Check if address is blacklisted or exchange in any path
+                let isBlacklisted = false;
+                let isExchange = false;
+                data.paths.forEach(path => {
+                    if (path.blacklisted_addresses && path.blacklisted_addresses.includes(addr)) {
+                        isBlacklisted = true;
+                    }
+                    if (path.exchange_addresses && path.exchange_addresses.includes(addr)) {
+                        isExchange = true;
+                    }
+                });
+                
+                // Determine node type and color
+                let nodeType = 'regular';
+                if (isSource) nodeType = 'source';
+                else if (isTarget) nodeType = 'target';
+                else if (isBlacklisted) nodeType = 'blacklisted';
+                else if (isExchange) nodeType = 'exchange';
+                
+                elements.push({
+                    data: {
+                        id: addr,
+                        label: addr.substring(0, 8) + '...' + addr.substring(addr.length - 6),
+                        fullAddress: addr,
+                        nodeType: nodeType
+                    }
+                });
+            });
+            
+            // Add edges with transaction hash data
+            edgesMap.forEach((edgeData, edgeKey) => {
+                const width = Math.max(Math.log10(edgeData.amount + 1) * 2, 1);
+                const isPathEdge = edgeData.from === data.source || edgeData.to === data.target;
+                
+                // Get all unique transaction hashes for this edge
+                const allTxHashes = edgeData.txHashes || [];
+                const uniqueTxHashes = [...new Set(allTxHashes)]; // Remove duplicates
+                
+                elements.push({
+                    data: {
+                        id: edgeKey,
+                        source: edgeData.from,
+                        target: edgeData.to,
+                        label: formatUSDTForGraph(edgeData.amount),
+                        amount: edgeData.amount,
+                        count: edgeData.count,
+                        width: width,
+                        isPathEdge: isPathEdge,
+                        txHashes: uniqueTxHashes, // Store ALL transaction hashes
+                        txHashCount: uniqueTxHashes.length
+                    }
+                });
+            });
+            
+            // Initialize Cytoscape
+            const cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': function(ele) { return ele.data('label'); },
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'text-wrap': 'wrap',
+                            'text-max-width': '80px',
+                            'font-size': '11px',
+                            'font-weight': 'bold',
+                            'color': '#000000',
+                            'width': 50,
+                            'height': 50,
+                            'shape': 'ellipse',
+                            'background-color': '#f0f0f0',
+                            'border-width': 2,
+                            'border-color': '#808080',
+                            'text-outline-width': 2,
+                            'text-outline-color': '#ffffff'
+                        }
+                    },
+                    {
+                        selector: 'node[nodeType="source"]',
+                        style: {
+                            'background-color': '#000000',
+                            'width': 70,
+                            'height': 70,
+                            'font-size': '13px',
+                            'label': function(ele) { return '⚡ SRC\n' + ele.data('label'); },
+                            'border-color': '#00ffff',
+                            'border-width': 3,
+                            'shape': 'star'
+                        }
+                    },
+                    {
+                        selector: 'node[nodeType="target"]',
+                        style: {
+                            'background-color': '#000000',
+                            'width': 70,
+                            'height': 70,
+                            'font-size': '13px',
+                            'label': function(ele) { return '◎ TGT\n' + ele.data('label'); },
+                            'border-color': '#000000',
+                            'border-width': 3,
+                            'shape': 'star'
+                        }
+                    },
+                    {
+                        selector: 'node[nodeType="blacklisted"]',
+                        style: {
+                            'background-color': '#1a1a1a',
+                            'border-color': '#ff00ff',
+                            'border-width': 4,
+                            'border-style': 'dashed',
+                            'shape': 'hexagon',
+                            'label': function(ele) { return '⚠ ' + ele.data('label'); }
+                        }
+                    },
+                    {
+                        selector: 'node[nodeType="exchange"]',
+                        style: {
+                            'background-color': '#e6e6fa',
+                            'border-color': '#9370db',
+                            'border-width': 2,
+                            'shape': 'diamond',
+                            'label': function(ele) { return '◊ ' + ele.data('label'); }
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 'data(width)',
+                            'line-color': '#808080',
+                            'target-arrow-color': '#000000',
+                            'target-arrow-shape': 'triangle-backcurve',
+                            'arrow-scale': 1.8,
+                            'curve-style': 'bezier',
+                            'label': function(ele) { return '→ ' + ele.data('label'); },
+                            'font-size': '9px',
+                            'font-weight': 'bold',
+                            'text-rotation': 'autorotate',
+                            'text-margin-y': -12,
+                            'text-outline-width': 1,
+                            'text-outline-color': '#ffffff',
+                            'text-background-color': '#000000',
+                            'text-background-opacity': 0.8,
+                            'text-background-padding': '2px',
+                            'opacity': 0.7
+                        }
+                    },
+                    {
+                        selector: 'edge[isPathEdge="true"]',
+                        style: {
+                            'line-color': '#000000',
+                            'target-arrow-color': '#000000',
+                            'width': 'data(width)',
+                            'opacity': 1,
+                            'line-style': 'solid',
+                            'source-endpoint': 'outside-to-node',
+                            'target-endpoint': 'outside-to-node'
+                        }
+                    }
+                ],
+                layout: (() => {
+                    // Try to use dagre layout if available, otherwise fallback to breadthfirst
+                    try {
+                        // Check if dagre layout is available by testing if the extension was registered
+                        if (typeof dagre !== 'undefined' && typeof cytoscapeDagre !== 'undefined') {
+                            return {
+                                name: 'dagre',
+                                rankDir: 'LR', // Left to Right (source on left, target on right)
+                                nodeSep: 100,
+                                edgeSep: 50,
+                                rankSep: 150,
+                                animate: true,
+                                animationDuration: 1000
+                            };
+                        }
+                    } catch (e) {
+                        console.warn('DAGRE layout not available, using fallback:', e);
+                    }
+                    
+                    // Fallback to breadthfirst layout (built-in, no dependencies)
+                    return {
+                        name: 'breadthfirst',
+                        directed: true,
+                        roots: data.source ? [`#${data.source}`] : undefined,
+                        padding: 50,
+                        spacingFactor: 1.5,
+                        animate: true,
+                        animationDuration: 1000
+                    };
+                })(),
+                minZoom: 0.1,
+                maxZoom: 3
+            });
+            
+            // Add click handlers for nodes
+            cy.on('tap', 'node', function(evt) {
+                const node = evt.target;
+                const addr = node.data('fullAddress');
+                window.open(`https://tronscan.org/#/address/${addr}`, '_blank');
+            });
+            
+            // Add click handlers for edges (transaction links)
+            cy.on('tap', 'edge', function(evt) {
+                const edge = evt.target;
+                const txHashes = edge.data('txHashes') || [];
+                const txHashCount = edge.data('txHashCount') || 0;
+                const amount = edge.data('amount') || 0;
+                const fromAddr = edge.source().data('fullAddress');
+                const toAddr = edge.target().data('fullAddress');
+                
+                if (txHashes.length === 0) {
+                    alert('No transaction hash available for this connection.');
+                    return;
+                }
+                
+                if (txHashes.length === 1) {
+                    // Single transaction - open directly
+                    window.open(`https://tronscan.org/#/transaction/${txHashes[0]}`, '_blank');
+                } else {
+                    // Multiple transactions - show popup with all links
+                    showTransactionModal(txHashes, fromAddr, toAddr, amount, txHashCount);
+                }
+            });
+            
+            // Add hover effects for nodes
+            cy.on('mouseover', 'node', function(evt) {
+                const node = evt.target;
+                const nodeType = node.data('nodeType');
+                node.style('border-width', 5);
+                node.style('z-index', 999);
+                if (nodeType === 'source' || nodeType === 'target') {
+                    node.style('width', 75);
+                    node.style('height', 75);
+                }
+            });
+            
+            cy.on('mouseout', 'node', function(evt) {
+                const node = evt.target;
+                const nodeType = node.data('nodeType');
+                const borderWidth = (nodeType === 'blacklisted') ? 4 : ((nodeType === 'source' || nodeType === 'target') ? 3 : 2);
+                node.style('border-width', borderWidth);
+                node.style('z-index', 0);
+                if (nodeType === 'source' || nodeType === 'target') {
+                    node.style('width', 70);
+                    node.style('height', 70);
+                }
+            });
+            
+            // Add hover effects for edges
+            cy.on('mouseover', 'edge', function(evt) {
+                const edge = evt.target;
+                edge.style('width', edge.data('width') * 1.5);
+                edge.style('opacity', 1);
+                edge.style('line-color', '#000000');
+                edge.style('target-arrow-color', '#000000');
+            });
+            
+            cy.on('mouseout', 'edge', function(evt) {
+                const edge = evt.target;
+                edge.style('width', edge.data('width'));
+                const isPathEdge = edge.data('isPathEdge');
+                edge.style('opacity', isPathEdge ? 1 : 0.7);
+                edge.style('line-color', isPathEdge ? '#000000' : '#808080');
+                edge.style('target-arrow-color', '#000000');
+            });
+            
+            // Fit graph to viewport
+            cy.fit(undefined, 50); // 50px padding
+        }
+        
+        // Helper function to format USDT amounts for graph edge labels
+        function formatUSDTForGraph(amount) {
+            if (!amount || amount === 0) return '$0';
+            if (amount >= 1000000) return '$' + (amount / 1000000).toFixed(1) + 'M';
+            if (amount >= 1000) return '$' + (amount / 1000).toFixed(1) + 'K';
+            return '$' + amount.toFixed(0);
+        }
+        
+        // Show transaction modal with all transaction links
+        function showTransactionModal(txHashes, fromAddr, toAddr, amount, count) {
+            const modal = document.getElementById('tx-modal');
+            const modalBody = document.getElementById('tx-modal-body');
+            
+            const html = `
+                <div class="tx-modal-info">
+                    <p><strong>From:</strong> <span style="font-family: 'Share Tech Mono', 'Courier New', monospace; color: #00ffff;">${fromAddr.substring(0, 12)}...${fromAddr.substring(fromAddr.length - 8)}</span></p>
+                    <p><strong>To:</strong> <span style="font-family: 'Share Tech Mono', 'Courier New', monospace; color: #00ffff;">${toAddr.substring(0, 12)}...${toAddr.substring(toAddr.length - 8)}</span></p>
+                    <p><strong>Total Amount:</strong> <span style="color: #00ffff;">${formatUSDT(amount)}</span></p>
+                    <p><strong>Transaction Count:</strong> <span style="color: #00ffff;">${count}</span></p>
+                </div>
+                <h3 style="color: #00ffff; margin-bottom: 15px;">All Transactions:</h3>
+                <ul class="tx-list">
+                    ${txHashes.map((txHash, idx) => `
+                        <li class="tx-list-item">
+                            <span class="tx-list-item-number">#${idx + 1}</span>
+                            <a href="https://tronscan.org/#/transaction/${txHash}" target="_blank" onclick="closeTxModal()">
+                                ${txHash}
+                            </a>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+            
+            modalBody.innerHTML = html;
+            modal.style.display = 'block';
+        }
+        
+        // Close transaction modal
+        function closeTxModal() {
+            document.getElementById('tx-modal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('tx-modal');
+            if (event.target === modal) {
+                closeTxModal();
+            }
+        }
+        
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function formatUSDT(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+        
+        function getRiskBadge(score, riskLevel = null) {
+            // Use riskLevel if provided, otherwise calculate from score
+            let riskClass;
+            if (riskLevel) {
+                riskClass = riskLevel === 'critical' ? 'risk-high' : 
+                           riskLevel === 'high' ? 'risk-high' : 
+                           riskLevel === 'medium' ? 'risk-medium' : 'risk-low';
+            } else {
+                riskClass = score >= 70 ? 'risk-high' : 
+                           score >= 50 ? 'risk-high' : 
+                           score >= 30 ? 'risk-medium' : 
+                           score >= 15 ? 'risk-medium' : 'risk-low';
+            }
+            const levelText = riskLevel ? ` (${riskLevel.toUpperCase()})` : '';
+            return `<span class="risk-badge ${riskClass}">Risk: ${score.toFixed(1)}/100${levelText}</span>`;
+        }
+        
+        function getWalletRatingDisplay(rating) {
+            if (!rating || !rating.overall_rating) return 'N/A';
+            const score = rating.overall_rating || 0;
+            const color = getRatingColor(score);
+            return `<span style="font-weight: bold; color: ${color}; font-size: 18px;">${score}/100</span>`;
+        }
+        
+        function getRatingColor(rating) {
+            if (rating >= 70) return '#28a745'; // Green
+            if (rating >= 50) return '#ffc107'; // Yellow
+            if (rating >= 30) return '#fd7e14'; // Orange
+            return '#dc3545'; // Red
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function clearResults() {
+            document.getElementById('source-address').value = '';
+            document.getElementById('target-address').value = '';
+            document.getElementById('search-depth').value = '2';
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+            analysisData = null;
+        }
+        
+        // Update depth info when depth selector changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const depthSelect = document.getElementById('search-depth');
+            const depthInfo = document.getElementById('depth-info');
+            
+            if (depthSelect && depthInfo) {
+                function updateDepthInfo() {
+                    const depth = parseInt(depthSelect.value);
+                    const timeoutMinutes = {
+                        1: 5,
+                        2: 15,
+                        3: 20,
+                        4: 40,
+                        5: 60
+                    };
+                    const maxTime = timeoutMinutes[depth] || 20;
+                    depthInfo.textContent = `Exploring up to ${depth} hop(s) deep (max timeout: ${maxTime} minutes)`;
+                }
+                
+                depthSelect.addEventListener('change', updateDepthInfo);
+                updateDepthInfo(); // Initial update
+            }
+        });
+    </script>
+</body>
+</html>
+
